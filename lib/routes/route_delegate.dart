@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 import '../screen/login_screen.dart';
 import '../screen/register_screen.dart';
+import '../screen/story_list_screen.dart';
+import '../screen/story_detail_screen.dart';
+import '../screen/add_story_screen.dart';
 import '../screen/splash_screen.dart';
 import '../screen/home_screen.dart';
 
-enum AppPage { splash, login, register, home }
+enum AppPage { splash, login, register, home, storyList, storyDetail, addStory }
 
 class RouteState extends ChangeNotifier {
   AppPage _currentPage = AppPage.splash;
+  String? _selectedStoryId;
 
   AppPage get currentPage => _currentPage;
+  String? get selectedStoryId => _selectedStoryId;
 
   void goToSplash() {
     _currentPage = AppPage.splash;
@@ -29,6 +34,34 @@ class RouteState extends ChangeNotifier {
   void goToHome() {
     _currentPage = AppPage.home;
     notifyListeners();
+  }
+
+  void goToStoryList() {
+    _currentPage = AppPage.storyList;
+    notifyListeners();
+  }
+
+  void goToStoryDetail(String storyId) {
+    _selectedStoryId = storyId;
+    _currentPage = AppPage.storyDetail;
+    notifyListeners();
+  }
+
+  void goToAddStory() {
+    _currentPage = AppPage.addStory;
+    notifyListeners();
+  }
+
+  void goBack() {
+    // contoh sederhana, bisa dikembangkan sesuai kebutuhan
+    if (_currentPage == AppPage.storyDetail) {
+      goToStoryList();
+    } else if (_currentPage == AppPage.storyList ||
+        _currentPage == AppPage.addStory) {
+      goToHome();
+    } else {
+      goToLogin();
+    }
   }
 }
 
@@ -77,6 +110,48 @@ class AppRouteDelegate extends RouterDelegate<Object>
           MaterialPage(child: HomeScreen(), key: ValueKey('HomeScreen')),
         ];
         break;
+      case AppPage.storyList:
+        stack = [
+          MaterialPage(
+            child: StoryListScreen(),
+            key: ValueKey('StoryListScreen'),
+          ),
+        ];
+        break;
+      case AppPage.storyDetail:
+        final storyId = routeState.selectedStoryId;
+        if (storyId == null) {
+          stack = [
+            MaterialPage(
+              child: StoryListScreen(),
+              key: ValueKey('StoryListScreen'),
+            ),
+          ];
+        } else {
+          stack = [
+            MaterialPage(
+              child: StoryListScreen(),
+              key: ValueKey('StoryListScreen'),
+            ),
+            MaterialPage(
+              child: StoryDetailScreen(storyId: storyId),
+              key: ValueKey('StoryDetailScreen-$storyId'),
+            ),
+          ];
+        }
+        break;
+      case AppPage.addStory:
+        stack = [
+          MaterialPage(
+            child: StoryListScreen(),
+            key: ValueKey('StoryListScreen'),
+          ),
+          MaterialPage(
+            child: AddStoryScreen(),
+            key: ValueKey('AddStoryScreen'),
+          ),
+        ];
+        break;
     }
 
     return Navigator(
@@ -86,12 +161,7 @@ class AppRouteDelegate extends RouterDelegate<Object>
         if (!route.didPop(result)) {
           return false;
         }
-        // Handle back button behavior
-        if (routeState.currentPage == AppPage.register) {
-          routeState.goToLogin();
-        } else if (routeState.currentPage == AppPage.home) {
-          routeState.goToLogin();
-        }
+        routeState.goBack();
         return true;
       },
     );

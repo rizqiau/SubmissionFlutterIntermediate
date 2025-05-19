@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:story_app/routes/route_delegate.dart';
 import '../provider/story_provider.dart';
 import '../db/auth_repository.dart';
 
@@ -67,10 +68,15 @@ class _AddStoryScreenState extends State<AddStoryScreen> {
     });
 
     if (success) {
+      final token = await context.read<AuthRepository>().getToken();
+      if (token != null) {
+        await context.read<StoryProvider>().loadStories(token);
+      }
+
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Cerita berhasil ditambahkan')));
-      Navigator.of(context).pop();
+      context.read<RouteState>().goToHome();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

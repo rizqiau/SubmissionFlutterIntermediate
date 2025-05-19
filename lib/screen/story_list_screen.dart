@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:story_app/db/auth_repository.dart';
+import 'package:story_app/routes/route_delegate.dart';
 import 'package:story_app/screen/add_story_screen.dart';
 import 'package:story_app/screen/story_detail_screen.dart';
 
@@ -71,12 +72,7 @@ class _StoryListScreenState extends State<StoryListScreen> {
                         ),
                         trailing: Icon(Icons.arrow_forward_ios, size: 16),
                         onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder:
-                                  (_) => StoryDetailScreen(storyId: story.id),
-                            ),
-                          );
+                          context.read<RouteState>().goToStoryDetail(story.id);
                         },
                       ),
                     );
@@ -87,9 +83,7 @@ class _StoryListScreenState extends State<StoryListScreen> {
         tooltip: 'Tambah Cerita',
         child: Icon(Icons.add),
         onPressed: () {
-          Navigator.of(
-            context,
-          ).push(MaterialPageRoute(builder: (_) => AddStoryScreen()));
+          context.read<RouteState>().goToAddStory();
         },
       ),
     );
