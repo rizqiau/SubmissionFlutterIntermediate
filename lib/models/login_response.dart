@@ -1,4 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
+import 'package:story_app/models/login_result.dart';
 
 part 'login_response.g.dart';
 
@@ -6,15 +7,9 @@ part 'login_response.g.dart';
 class LoginResponse {
   final bool error;
   final String message;
-  final String token;
-  final String name;
+  final LoginResult? loginResult;
 
-  LoginResponse({
-    required this.error,
-    required this.message,
-    required this.token,
-    required this.name,
-  });
+  LoginResponse({required this.error, required this.message, this.loginResult});
 
   factory LoginResponse.fromJson(Map<String, dynamic> json) =>
       _$LoginResponseFromJson(json);

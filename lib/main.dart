@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:story_app/db/auth_repository.dart';
 import 'package:story_app/db/story_repository.dart';
+import 'package:story_app/provider/add_story_provider.dart';
 import 'package:story_app/provider/story_provider.dart';
 import 'package:story_app/routes/route_delegate.dart';
 import 'package:story_app/routes/simple_route_information_parser.dart';
@@ -19,6 +20,7 @@ void main() {
         Provider<AuthRepository>.value(value: authRepository),
         Provider<StoryRepository>.value(value: storyRepository),
         ChangeNotifierProvider<RouteState>(create: (_) => RouteState()),
+        ChangeNotifierProvider(create: (_) => AddStoryProvider()),
         ChangeNotifierProvider<StoryProvider>(
           create: (_) => StoryProvider(storyRepository),
         ),

@@ -14,11 +14,11 @@ class AuthRepository {
   Future<String?> login(String email, String password) async {
     try {
       final loginResponse = await apiService.login(email, password);
-      if (!loginResponse.error) {
+      if (!loginResponse.error && loginResponse.loginResult != null) {
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('token', loginResponse.token);
-        await prefs.setString('name', loginResponse.name);
-        return loginResponse.token;
+        await prefs.setString('token', loginResponse.loginResult!.token);
+        await prefs.setString('name', loginResponse.loginResult!.name);
+        return loginResponse.loginResult!.token;
       }
     } catch (e) {
       rethrow;

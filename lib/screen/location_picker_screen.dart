@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:provider/provider.dart';
+import 'package:story_app/routes/route_delegate.dart';
+import '../provider/add_story_provider.dart';
 
 class LocationPickerScreen extends StatefulWidget {
   final LatLng? initialLocation;
@@ -28,7 +31,8 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
   void _onConfirm() {
     if (_pickedLocation != null) {
-      Navigator.of(context).pop(_pickedLocation);
+      context.read<AddStoryProvider>().setLocation(_pickedLocation!);
+      context.read<RouteState>().goBack();
     } else {
       ScaffoldMessenger.of(
         context,

@@ -17,11 +17,11 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
     try {
       final loginResponse = await apiService.login(email, password);
-      if (!loginResponse.error) {
+      if (!loginResponse.error && loginResponse.loginResult != null) {
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('token', loginResponse.token);
+        await prefs.setString('token', loginResponse.loginResult!.token);
         isLoggedIn = true;
-        token = loginResponse.token;
+        token = loginResponse.loginResult!.token;
         notifyListeners();
         return true;
       }

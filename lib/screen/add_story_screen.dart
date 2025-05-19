@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:story_app/provider/add_story_provider.dart';
 import 'package:story_app/routes/route_delegate.dart';
-import 'package:story_app/screen/location_picker_screen.dart';
 import '../provider/story_provider.dart';
 import '../db/auth_repository.dart';
 
@@ -16,82 +16,18 @@ class AddStoryScreen extends StatefulWidget {
 
 class _AddStoryScreenState extends State<AddStoryScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _descController = TextEditingController();
-  File? _imageFile;
+  late TextEditingController _descController;
   bool _isSubmitting = false;
-  double? _selectedLat;
-  double? _selectedLon;
+  String? _errorMessage;
 
-  Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 800,
-      maxHeight: 800,
-    );
-
-    if (pickedFile != null) {
-      setState(() {
-        _imageFile = File(pickedFile.path);
-      });
-    }
-  }
-
-  Future<void> _submit() async {
-    if (!_formKey.currentState!.validate() || _imageFile == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Lengkapi form dan pilih gambar')));
-      return;
-    }
-
-    setState(() {
-      _isSubmitting = true;
+  @override
+  void initState() {
+    super.initState();
+    final addStoryProvider = context.read<AddStoryProvider>();
+    _descController = TextEditingController(text: addStoryProvider.description);
+    _descController.addListener(() {
+      addStoryProvider.setDescription(_descController.text);
     });
-
-    final token = await context.read<AuthRepository>().getToken();
-    if (token == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Token tidak ditemukan, silakan login ulang')),
-      );
-      setState(() {
-        _isSubmitting = false;
-      });
-      return;
-    }
-
-    final storyProvider = context.read<StoryProvider>();
-    final success = await storyProvider.addStory(
-      token: token,
-      description: _descController.text,
-      photo: _imageFile!,
-      lat: _selectedLat,
-      lon: _selectedLon,
-    );
-
-    setState(() {
-      _isSubmitting = false;
-    });
-
-    if (success) {
-      final token = await context.read<AuthRepository>().getToken();
-      if (token != null) {
-        await context.read<StoryProvider>().refreshStories(token);
-      }
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Cerita berhasil ditambahkan')));
-      context.read<RouteState>().goToHome();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            storyProvider.errorMessage ?? 'Gagal menambahkan cerita',
-          ),
-        ),
-      );
-    }
   }
 
   @override
@@ -100,8 +36,79 @@ class _AddStoryScreenState extends State<AddStoryScreen> {
     super.dispose();
   }
 
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 800,
+      maxHeight: 800,
+    );
+    if (pickedFile != null) {
+      context.read<AddStoryProvider>().setImage(File(pickedFile.path));
+    }
+  }
+
+  Future<void> _submit() async {
+    final addStoryProvider = context.read<AddStoryProvider>();
+
+    if (!_formKey.currentState!.validate() ||
+        addStoryProvider.imageFile == null) {
+      setState(() {
+        _errorMessage = 'Lengkapi form dan pilih gambar';
+      });
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+      _errorMessage = null;
+    });
+
+    final token = await context.read<AuthRepository>().getToken();
+    if (token == null) {
+      setState(() {
+        _isSubmitting = false;
+        _errorMessage = 'Token tidak ditemukan, silakan login ulang';
+      });
+      return;
+    }
+
+    final storyProvider = context.read<StoryProvider>();
+    final success = await storyProvider.addStory(
+      token: token,
+      description: addStoryProvider.description,
+      photo: addStoryProvider.imageFile!,
+      lat: addStoryProvider.lat,
+      lon: addStoryProvider.lon,
+    );
+
+    setState(() {
+      _isSubmitting = false;
+    });
+
+    if (success) {
+      if (token != null) {
+        await storyProvider.refreshStories(token);
+      }
+      addStoryProvider.reset();
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Cerita berhasil ditambahkan')));
+      context.read<RouteState>().goToHome();
+    } else {
+      setState(() {
+        _errorMessage =
+            storyProvider.errorMessage ?? 'Gagal menambahkan cerita';
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final addStoryProvider = context.watch<AddStoryProvider>();
+    final routeState = context.read<RouteState>();
+
     return Scaffold(
       appBar: AppBar(title: Text('Tambah Cerita')),
       body: Padding(
@@ -110,7 +117,7 @@ class _AddStoryScreenState extends State<AddStoryScreen> {
           key: _formKey,
           child: ListView(
             children: [
-              _imageFile == null
+              addStoryProvider.imageFile == null
                   ? Container(
                     height: 200,
                     decoration: BoxDecoration(
@@ -127,7 +134,7 @@ class _AddStoryScreenState extends State<AddStoryScreen> {
                   : ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child: Image.file(
-                      _imageFile!,
+                      addStoryProvider.imageFile!,
                       height: 200,
                       fit: BoxFit.cover,
                     ),
@@ -154,36 +161,36 @@ class _AddStoryScreenState extends State<AddStoryScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                _selectedLat != null && _selectedLon != null
-                    ? 'Lokasi terpilih: ($_selectedLat, $_selectedLon)'
+                addStoryProvider.lat != null && addStoryProvider.lon != null
+                    ? 'Lokasi terpilih: (${addStoryProvider.lat}, ${addStoryProvider.lon})'
                     : 'Belum memilih lokasi',
                 style: TextStyle(fontSize: 16),
               ),
               TextButton.icon(
                 icon: Icon(Icons.location_on),
                 label: Text('Pilih Lokasi'),
-                onPressed: () async {
-                  final LatLng? result = await Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder:
-                          (_) => LocationPickerScreen(
-                            initialLocation:
-                                _selectedLat != null && _selectedLon != null
-                                    ? LatLng(_selectedLat!, _selectedLon!)
-                                    : null,
-                          ),
-                    ),
+                onPressed: () {
+                  routeState.goToLocationPicker(
+                    initialLocation:
+                        addStoryProvider.lat != null &&
+                                addStoryProvider.lon != null
+                            ? LatLng(
+                              addStoryProvider.lat!,
+                              addStoryProvider.lon!,
+                            )
+                            : null,
                   );
-
-                  if (result != null) {
-                    setState(() {
-                      _selectedLat = result.latitude;
-                      _selectedLon = result.longitude;
-                    });
-                  }
                 },
               ),
               const SizedBox(height: 20),
+              if (_errorMessage != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    _errorMessage!,
+                    style: TextStyle(color: Colors.red),
+                  ),
+                ),
               _isSubmitting
                   ? Center(child: CircularProgressIndicator())
                   : ElevatedButton(
