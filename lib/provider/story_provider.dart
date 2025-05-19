@@ -19,12 +19,39 @@ class StoryProvider extends ChangeNotifier {
   bool isLoading = false;
   String? errorMessage;
 
-  Future<void> loadStories(String token) async {
+  int _page = 1;
+  final int _size = 10;
+  bool _hasMore = true;
+
+  bool get hasMore => _hasMore;
+
+  Future<void> loadStories(String token, {bool isRefresh = false}) async {
+    if (isRefresh) {
+      _page = 1;
+      _hasMore = true;
+    }
+
+    if (!_hasMore) return;
+
     isLoading = true;
     notifyListeners();
 
     try {
-      _stories = await storyRepository.fetchStories(token);
+      final response = await storyRepository.fetchStories(
+        token,
+        page: _page,
+        size: _size,
+      );
+
+      if (isRefresh) {
+        _stories = response.listStory;
+      } else {
+        _stories.addAll(response.listStory);
+      }
+
+      _hasMore = response.listStory.length >= _size;
+      _page++;
+
       errorMessage = null;
     } catch (e) {
       errorMessage = e.toString();
@@ -32,6 +59,16 @@ class StoryProvider extends ChangeNotifier {
 
     isLoading = false;
     notifyListeners();
+  }
+
+  Future<void> refreshStories(String token) async {
+    _page = 1;
+    _hasMore = true;
+    _stories.clear();
+    isLoading = true; // Kosongkan list sebelum load ulang
+    notifyListeners();
+
+    await loadStories(token);
   }
 
   Future<void> loadStoryDetail(String token, String storyId) async {

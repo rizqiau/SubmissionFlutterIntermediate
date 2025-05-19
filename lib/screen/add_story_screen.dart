@@ -1,9 +1,11 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:story_app/routes/route_delegate.dart';
+import 'package:story_app/screen/location_picker_screen.dart';
 import '../provider/story_provider.dart';
 import '../db/auth_repository.dart';
 
@@ -17,6 +19,8 @@ class _AddStoryScreenState extends State<AddStoryScreen> {
   final _descController = TextEditingController();
   File? _imageFile;
   bool _isSubmitting = false;
+  double? _selectedLat;
+  double? _selectedLon;
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
@@ -61,6 +65,8 @@ class _AddStoryScreenState extends State<AddStoryScreen> {
       token: token,
       description: _descController.text,
       photo: _imageFile!,
+      lat: _selectedLat,
+      lon: _selectedLon,
     );
 
     setState(() {
@@ -70,7 +76,7 @@ class _AddStoryScreenState extends State<AddStoryScreen> {
     if (success) {
       final token = await context.read<AuthRepository>().getToken();
       if (token != null) {
-        await context.read<StoryProvider>().loadStories(token);
+        await context.read<StoryProvider>().refreshStories(token);
       }
 
       ScaffoldMessenger.of(
@@ -145,6 +151,37 @@ class _AddStoryScreenState extends State<AddStoryScreen> {
                             ? null
                             : 'Deskripsi wajib diisi',
                 maxLines: 3,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                _selectedLat != null && _selectedLon != null
+                    ? 'Lokasi terpilih: ($_selectedLat, $_selectedLon)'
+                    : 'Belum memilih lokasi',
+                style: TextStyle(fontSize: 16),
+              ),
+              TextButton.icon(
+                icon: Icon(Icons.location_on),
+                label: Text('Pilih Lokasi'),
+                onPressed: () async {
+                  final LatLng? result = await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder:
+                          (_) => LocationPickerScreen(
+                            initialLocation:
+                                _selectedLat != null && _selectedLon != null
+                                    ? LatLng(_selectedLat!, _selectedLon!)
+                                    : null,
+                          ),
+                    ),
+                  );
+
+                  if (result != null) {
+                    setState(() {
+                      _selectedLat = result.latitude;
+                      _selectedLon = result.longitude;
+                    });
+                  }
+                },
               ),
               const SizedBox(height: 20),
               _isSubmitting

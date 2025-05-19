@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:story_app/models/story_list_response.dart';
+
 import '../models/story.dart';
 import '../services/api_service.dart';
 
@@ -8,8 +10,12 @@ class StoryRepository {
 
   StoryRepository(this.apiService);
 
-  Future<List<Story>> fetchStories(String token) async {
-    return await apiService.getStories(token);
+  Future<StoryListResponse> fetchStories(
+    String token, {
+    int page = 1,
+    int size = 10,
+  }) async {
+    return await apiService.getStories(token, page: page, size: size);
   }
 
   Future<Story> fetchStoryDetail(String token, String storyId) async {

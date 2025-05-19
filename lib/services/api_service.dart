@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:story_app/models/story.dart';
+import 'package:story_app/models/story_list_response.dart';
 import '../models/user.dart';
 import '../models/login_response.dart';
 
@@ -37,10 +38,10 @@ class ApiService {
     }
   }
 
-  Future<List<Story>> getStories(
+  Future<StoryListResponse> getStories(
     String token, {
     int page = 1,
-    int size = 20,
+    int size = 10,
   }) async {
     final response = await http.get(
       Uri.parse('$baseUrl/stories?page=$page&size=$size'),
@@ -49,8 +50,7 @@ class ApiService {
 
     final data = jsonDecode(response.body);
     if (response.statusCode == 200 && data['error'] == false) {
-      List listStory = data['listStory'];
-      return listStory.map((json) => Story.fromJson(json)).toList();
+      return StoryListResponse.fromJson(data);
     } else {
       throw Exception(data['message'] ?? 'Failed to fetch stories');
     }
@@ -85,7 +85,6 @@ class ApiService {
     if (lat != null) request.fields['lat'] = lat.toString();
     if (lon != null) request.fields['lon'] = lon.toString();
 
-    final mimeType = 'image/jpeg'; // asumsi jpeg, bisa dikembangkan
     request.files.add(
       await http.MultipartFile.fromPath(
         'photo',

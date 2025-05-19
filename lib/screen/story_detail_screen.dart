@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:provider/provider.dart';
 
 import '../provider/story_provider.dart';
@@ -14,6 +16,9 @@ class StoryDetailScreen extends StatefulWidget {
 }
 
 class _StoryDetailScreenState extends State<StoryDetailScreen> {
+  late GoogleMapController mapController;
+  String? _address;
+
   @override
   void initState() {
     super.initState();
@@ -35,56 +40,129 @@ class _StoryDetailScreenState extends State<StoryDetailScreen> {
     final storyProvider = context.watch<StoryProvider>();
     final story = storyProvider.selectedStory;
 
+    final LatLng? storyLocation =
+        (story != null && story.lat != null && story.lon != null)
+            ? LatLng(story.lat!, story.lon!)
+            : null;
+
+    if (storyProvider.isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Detail Cerita'), centerTitle: true),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (storyProvider.errorMessage != null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Detail Cerita'), centerTitle: true),
+        body: Center(child: Text(storyProvider.errorMessage!)),
+      );
+    }
+
+    if (story == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Detail Cerita'), centerTitle: true),
+        body: const Center(child: Text('Cerita tidak ditemukan')),
+      );
+    }
+
+    // Jika sudah pasti story tidak null, aman akses properti story
     return Scaffold(
-      appBar: AppBar(title: Text('Detail Cerita'), centerTitle: true),
-      body:
-          storyProvider.isLoading
-              ? Center(child: CircularProgressIndicator())
-              : storyProvider.errorMessage != null
-              ? Center(child: Text(storyProvider.errorMessage!))
-              : story == null
-              ? Center(child: Text('Cerita tidak ditemukan'))
-              : SingleChildScrollView(
-                padding: EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      story.name,
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blueAccent,
-                      ),
+      appBar: AppBar(title: const Text('Detail Cerita'), centerTitle: true),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    story.name,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
                     ),
-                    SizedBox(height: 16),
-                    Container(
-                      decoration: BoxDecoration(
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black26,
-                            blurRadius: 8,
-                            offset: Offset(0, 4),
-                          ),
-                        ],
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: Image.network(
-                        story.photoUrl,
-                        height: 220, // Atur tinggi sesuai kebutuhan, misal 220
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                    SizedBox(height: 16),
-                    Text(
-                      story.description,
-                      style: TextStyle(fontSize: 16, height: 1.5),
-                    ),
-                  ],
+                  ),
+                  const SizedBox(height: 16),
+                  Image.network(
+                    story.photoUrl,
+                    width: double.infinity,
+                    height: 200,
+                    fit: BoxFit.cover,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(story.description, style: const TextStyle(fontSize: 16)),
+                ],
+              ),
+            ),
+            if (storyLocation != null) ...[
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  'Lokasi Cerita',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
+              SizedBox(
+                height: 200,
+                child: GoogleMap(
+                  initialCameraPosition: CameraPosition(
+                    target: storyLocation,
+                    zoom: 14,
+                  ),
+                  markers: {
+                    Marker(
+                      markerId: const MarkerId('storyLocation'),
+                      position: storyLocation,
+                      infoWindow: InfoWindow(
+                        title: 'Lokasi Cerita',
+                        snippet: _address,
+                      ),
+                    ),
+                  },
+                  onMapCreated: (controller) async {
+                    mapController = controller;
+                    await _getAddress(storyLocation);
+                  },
+                ),
+              ),
+              if (_address != null)
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    'Alamat: $_address',
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                ),
+            ],
+          ],
+        ),
+      ),
     );
+  }
+
+  Future<void> _getAddress(LatLng position) async {
+    try {
+      final placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      final place = placemarks.first;
+      setState(() {
+        _address = [
+          place.street,
+          place.subLocality,
+          place.locality,
+          place.postalCode,
+        ].where((element) => element != null && element.isNotEmpty).join(', ');
+      });
+    } catch (e) {
+      setState(() {
+        _address = 'Tidak dapat menemukan alamat';
+      });
+    }
   }
 }
