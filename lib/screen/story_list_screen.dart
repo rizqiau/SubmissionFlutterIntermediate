@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:story_app/db/auth_repository.dart';
 import 'package:story_app/routes/route_delegate.dart';
-import 'package:story_app/screen/add_story_screen.dart';
-import 'package:story_app/screen/story_detail_screen.dart';
 
 import '../provider/story_provider.dart';
 
